@@ -1,42 +1,70 @@
+console.log("Service Worker starting");
+
+// Create an alarm that goes off every minute
 chrome.alarms.create("pomodoroTimer", {
-  periodInMinutes: 1 / 60, // 1 second
+  periodInMinutes: 1,
 });
 
+let intervalId; // Reference for the setInterval
+
+// Listen for the alarm
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === "pomodoroTimer") {
-    chrome.storage.local.get(
-      ["timer", "isRunning", "timeOption"],
-      function (result) {
-        if (result.isRunning) {
-          let timer = result.timer + 1;
-          let isRunning = result.isRunning;
+  console.log("Alarm triggered:", alarm);
 
-          // Check if the timer has reached the set timeOption
-          if (timer >= 60 * result.timeOption) {
-            console.log("Time's up!");
-            showNotification(
-              "Pomodoro Timer",
-              `${result.timeOption} minutes have passed! Take a break!`
-            );
-
-            // Reset timer and stop it
-            timer = 0;
-            isRunning = false;
-          }
-
-          // Update the timer and isRunning status
-          chrome.storage.local.set(
-            { timer: timer, isRunning: isRunning },
-            function () {
-              console.log("Timer updated");
-            }
-          );
-        }
-      }
-    );
-  }
+  handleTrigger(alarm);
 });
 
+handleTrigger({ name: "pomodoroTimer" });
+
+// Function to handle the alarm trigger
+function handleTrigger(alarm) {
+  if (alarm.name === "pomodoroTimer") {
+    // Clear any existing interval to avoid overlaps
+    clearInterval(intervalId);
+
+    // Set up a new interval to run every second for 60 seconds
+    let secondsPassed = 0;
+    intervalId = setInterval(() => {
+      updateTimer();
+
+      secondsPassed++;
+      if (secondsPassed >= 60) {
+        clearInterval(intervalId); // Clear the interval after 60 seconds
+      }
+    }, 1000); // 1000 milliseconds = 1 second
+  }
+}
+
+// Function to update the timer
+function updateTimer() {
+  chrome.storage.local.get(
+    ["timer", "isRunning", "timeOption"],
+    function (result) {
+      if (result.isRunning) {
+        let timer = result.timer + 1;
+        // Check if the timer has reached the set timeOption
+        if (timer >= 60 * result.timeOption) {
+          showNotification(
+            "Pomodoro Timer",
+            `${result.timeOption} minutes have passed! Take a break!`
+          );
+
+          // Reset timer and stop it
+          timer = 0;
+          result.isRunning = false;
+        }
+
+        // Update the timer and isRunning status
+        chrome.storage.local.set(
+          { timer: timer, isRunning: result.isRunning },
+          function () {}
+        );
+      }
+    }
+  );
+}
+
+// Function to show notifications
 function showNotification(title, message) {
   chrome.notifications.create(
     "name-for-notification",
@@ -56,9 +84,9 @@ chrome.storage.local.get(
   function (result) {
     chrome.storage.local.set(
       {
-        timer: "timer" in result ? result.timer : 0,
-        isRunning: "isRunning" in result ? result.isRunning : false,
-        timeOption: "timeOption" in result ? result.timeOption : 25,
+        timer: result.timer ?? 0,
+        isRunning: result.isRunning ?? false,
+        timeOption: result.timeOption ?? 25,
       },
       function () {
         console.log("Initial setup complete");

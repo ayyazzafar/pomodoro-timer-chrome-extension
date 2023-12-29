@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Pomodoro Timer",
   "version": "1.1",
-  "description": "A simple pomodoro timer that helps you focus and get things donce!",
+  "description": "A simple pomodoro timer that helps you focus and get things done!",
   "icons": {
     "16": "icon.png",
     "48": "icon.png",
